@@ -1,13 +1,9 @@
-const axios = require('axios');
 const yargs = require('yargs');
 const fs = require('fs');
 const { option } = require('yargs');
-const transform = require('./transform');
+const importer = require('./importer');
 
 (async () => {
-	const checklyApiKey = process.env.CHECKLY_API_KEY;
-	const checklyAccountId = process.env.CHECKLY_ACCOUNT_ID;
-
 	// Command line arguments
 	const options = yargs
 		.usage('Usage: -c <path_to_postman_collection>')
@@ -50,49 +46,5 @@ const transform = require('./transform');
 
 	// Collection import
 	let collectionJson = fs.readFileSync(collectionPath);
-	const collectionJsonObj = JSON.parse(collectionJson);
-	const postmanFolders = collectionJsonObj.item;
-
-	console.log('Importing collection ' + collectionJsonObj.info.name);
-
-	// Axios base config
-	const instance = axios.create({
-		baseURL: 'https://api.checklyhq.com',
-		headers: {
-			Authorization: `Bearer ${checklyApiKey}`,
-			'X-Checkly-Account': checklyAccountId,
-			'Content-Type': 'application/json',
-		},
-	});
-
-	// Postman Folders -> Checkly Groups
-	for (let postmanFolder of postmanFolders) {
-		console.log(`Adding group ${postmanFolder.name}`);
-
-		const postmanTests = postmanFolder.item;
-
-		const checklyGroup = transform.transformFolder(postmanFolder)
-
-		const response = await instance({
-			method: 'post',
-			url: '/v1/check-groups',
-			data: checklyGroup,
-		});
-
-		const groupId = response.data.id;
-
-		// Postman Tests -> Checkly Checks
-		for (let postmanTest of postmanTests) {
-			console.log(`> Adding check ${postmanTest.name}`);
-
-			const checklyCheck = transform.transformTest(postmanTest, groupId)
-
-			await instance({
-				method: 'post',
-				url: '/v1/checks',
-				data: checklyCheck,
-			});
-		}
-	}
+	await importer.consume(collectionJson);
 })();
-
