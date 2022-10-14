@@ -7,9 +7,10 @@ const { option } = require('yargs');
 	const checklyApiKey = process.env.CHECKLY_API_KEY;
 	const checklyAccountId = process.env.CHECKLY_ACCOUNT_ID;
 
+	// Command line arguments
 	const options = yargs
 		.usage('Usage: -c <path_to_postman_collection>')
-		.option('c', {
+		.option('p', {
 			alias: 'path',
 			describe: 'Path to the Postman collection you want to import',
 			type: 'string',
@@ -22,7 +23,7 @@ const { option } = require('yargs');
 			demandOption: false,
 		}).argv;
 
-	const collectionPath = options.c;
+	const collectionPath = options.p;
 
 	// Environment variable file import (Optional)
 	if (option.e) {
@@ -50,6 +51,8 @@ const { option } = require('yargs');
 	let collectionJson = fs.readFileSync(collectionPath);
 	const collectionJsonObj = JSON.parse(collectionJson);
 	const folders = collectionJsonObj.item;
+
+	console.log('Importing collection ' + collectionJsonObj.info.name)
 
 	// Axios config
 	const instance = axios.create({
@@ -129,11 +132,13 @@ const { option } = require('yargs');
 			const newQueryParams = [];
 
 			for (let oldHeader of oldRequestHeaders) {
-				const newHeader = {
-					key: oldHeader.key,
-					value: oldHeader.value,
-				};
-				newRequestHeaders.push(newHeader);
+				if (oldHeader.key) {
+					const newHeader = {
+						key: oldHeader.key,
+						value: oldHeader.value,
+					};
+					newRequestHeaders.push(newHeader);
+				}
 			}
 
 			if (oldQueryParams) {
@@ -151,56 +156,58 @@ const { option } = require('yargs');
 			const basicAuthUsername = request.auth?.basic[0]?.value;
 			const basicAuthPassword = request.auth?.basic[0]?.value;
 
+			const finishedCheck = {
+				name: checkName,
+				groupId: groupId,
+				checkType: 'API',
+				frequency: 10,
+				activated: true,
+				muted: false,
+				doubleCheck: true,
+				sslCheck: false,
+				shouldFail: false,
+				locations: ['us-east-1', 'eu-central-1'],
+				request: {
+					method: requestMethod,
+					url: requestUrlRaw,
+					followRedirects: true,
+					body: requestBody,
+					bodyType: 'RAW',
+					headers: newRequestHeaders,
+					queryParameters: newQueryParams,
+					assertions: [],
+					basicAuth: {
+						username: basicAuthUsername ? basicAuthUsername : '',
+						password: basicAuthPassword ? basicAuthPassword : '',
+					},
+				},
+				alertSettings: {
+					escalationType: 'RUN_BASED',
+					runBasedEscalation: {
+						failedRunThreshold: 1,
+					},
+					timeBasedEscalation: {
+						minutesFailingThreshold: 5,
+					},
+					reminders: {
+						amount: 0,
+						interval: 5,
+					},
+					sslCertificates: {
+						enabled: true,
+						alertThreshold: 30,
+					},
+				},
+				useGlobalAlertSettings: true,
+				degradedResponseTime: 10000,
+				maxResponseTime: 20000,
+			}
+
 			await instance({
 				method: 'post',
 				url: '/v1/checks',
-				data: {
-					name: checkName,
-					groupId: groupId,
-					checkType: 'API',
-					frequency: 10,
-					activated: true,
-					muted: false,
-					doubleCheck: true,
-					sslCheck: false,
-					shouldFail: false,
-					locations: ['us-east-1', 'eu-central-1'],
-					request: {
-						method: requestMethod,
-						url: requestUrlRaw,
-						followRedirects: true,
-						body: requestBody,
-						bodyType: 'RAW',
-						headers: newRequestHeaders,
-						queryParameters: newQueryParams,
-						assertions: [],
-						basicAuth: {
-							username: basicAuthUsername ? basicAuthUsername : '',
-							password: basicAuthPassword ? basicAuthPassword : '',
-						},
-					},
-					alertSettings: {
-						escalationType: 'RUN_BASED',
-						runBasedEscalation: {
-							failedRunThreshold: 1,
-						},
-						timeBasedEscalation: {
-							minutesFailingThreshold: 5,
-						},
-						reminders: {
-							amount: 0,
-							interval: 5,
-						},
-						sslCertificates: {
-							enabled: true,
-							alertThreshold: 30,
-						},
-					},
-					useGlobalAlertSettings: true,
-					degradedResponseTime: 10000,
-					maxResponseTime: 20000,
-				},
-			});
+				data: finishedCheck,
+			})
 		}
 	}
 })();
