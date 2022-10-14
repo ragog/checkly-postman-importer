@@ -1,24 +1,25 @@
 const axios = require('axios');
 const converter = require('./converter');
 
-async function consume(collectionJson) {
-	const checklyApiKey = process.env.CHECKLY_API_KEY;
-	const checklyAccountId = process.env.CHECKLY_ACCOUNT_ID;
+const checklyApiKey = process.env.CHECKLY_API_KEY;
+const checklyAccountId = process.env.CHECKLY_ACCOUNT_ID;
+
+// Axios base config
+const instance = axios.create({
+    baseURL: 'https://api.checklyhq.com',
+    headers: {
+        Authorization: `Bearer ${checklyApiKey}`,
+        'X-Checkly-Account': checklyAccountId,
+        'Content-Type': 'application/json',
+    },
+});
+
+async function consumeCollection(collectionJson) {
 
 	const collectionJsonObj = JSON.parse(collectionJson);
 	const postmanFolders = collectionJsonObj.item;
 
 	console.log('Importing collection ' + collectionJsonObj.info.name);
-
-	// Axios base config
-	const instance = axios.create({
-		baseURL: 'https://api.checklyhq.com',
-		headers: {
-			Authorization: `Bearer ${checklyApiKey}`,
-			'X-Checkly-Account': checklyAccountId,
-			'Content-Type': 'application/json',
-		},
-	});
 
 	// Postman Folders -> Checkly Groups
 	for (let postmanFolder of postmanFolders) {
@@ -51,6 +52,29 @@ async function consume(collectionJson) {
 	}
 }
 
+async function consumeEnvironment(environmentJson) {
+    const environmentVarsJsonObj = JSON.parse(environmentJson);
+    const envVariables = environmentVarsJsonObj.values;
+
+    console.log('Importing environment ' + environmentVarsJsonObj.name);
+
+    // NOTE: skips variables with empty value
+    for (let envVariable of envVariables) {
+        if (envVariable.value) {
+            await instance({
+                method: 'post',
+                url: '/v1/variables',
+                data: {
+                    key: envVariable.key,
+                    value: envVariable.value,
+                    locked: false,
+                },
+            });
+        }
+    }
+}
+
 module.exports = {
-	consume: consume,
+	consumeCollection: consumeCollection,
+	consumeEnvironment: consumeEnvironment,
 };

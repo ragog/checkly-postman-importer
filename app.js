@@ -23,28 +23,12 @@ const importer = require('./importer');
 	const collectionPath = options.p;
 
 	// Environment variable file import (Optional)
-	if (option.e) {
-		let environmentVarsJson = fs.readFileSync(option.e);
-		const environmentVarsJsonObj = JSON.parse(environmentVarsJson);
-		const envVariables = environmentVarsJsonObj.values;
-
-		// NOTE: skips variables with empty value
-		for (let envVariable of envVariables) {
-			if (envVariable.value) {
-				await instance({
-					method: 'post',
-					url: '/v1/variables',
-					data: {
-						key: envVariable.key,
-						value: envVariable.value,
-						locked: false,
-					},
-				});
-			}
-		}
+	if (options.e) {
+		let environmentJson = fs.readFileSync(options.e);
+		await importer.consumeEnvironment(environmentJson)
 	}
 
 	// Collection import
 	let collectionJson = fs.readFileSync(collectionPath);
-	await importer.consume(collectionJson);
+	await importer.consumeCollection(collectionJson);
 })();
