@@ -7,20 +7,37 @@ const checklyBaseUrl = process.env.CHECKLY_BASE_URL;
 
 // Axios base config
 const instance = axios.create({
-    baseURL: checklyBaseUrl ? checklyBaseUrl : 'https://api.checklyhq.com',
-    headers: {
-        Authorization: `Bearer ${checklyApiKey}`,
-        'X-Checkly-Account': checklyAccountId,
-        'Content-Type': 'application/json',
-    },
+	baseURL: checklyBaseUrl ? checklyBaseUrl : 'https://api.checklyhq.com',
+	headers: {
+		Authorization: `Bearer ${checklyApiKey}`,
+		'X-Checkly-Account': checklyAccountId,
+		'Content-Type': 'application/json',
+	},
 });
 
 async function consumeCollection(collectionJson) {
-
 	const collectionJsonObj = JSON.parse(collectionJson);
 	const postmanFolders = collectionJsonObj.item;
 
 	console.log('Importing collection ' + collectionJsonObj.info.name);
+
+	const variables = collectionJsonObj.variable;
+
+    if (variables?.length) {
+        for (let variable of variables) {
+            if (variable.value) {
+                console.log(`Adding variable '${variable.key}'.`)
+                await instance({
+                    method: 'post',
+                    url: '/v1/variables',
+                    data: { key: variable.key, value: variable.value },
+                });
+            } else {
+                console.log(`Variable '${variable.key}' has no value - skipping.`)
+            }
+            
+        }
+    }
 
 	// Postman Folders -> Checkly Groups
 	for (let postmanFolder of postmanFolders) {
@@ -54,25 +71,25 @@ async function consumeCollection(collectionJson) {
 }
 
 async function consumeEnvironment(environmentJson) {
-    const environmentVarsJsonObj = JSON.parse(environmentJson);
-    const envVariables = environmentVarsJsonObj.values;
+	const environmentVarsJsonObj = JSON.parse(environmentJson);
+	const envVariables = environmentVarsJsonObj.values;
 
-    console.log('Importing environment ' + environmentVarsJsonObj.name);
+	console.log('Importing environment ' + environmentVarsJsonObj.name);
 
-    // NOTE: skips variables with empty value
-    for (let envVariable of envVariables) {
-        if (envVariable.value) {
-            await instance({
-                method: 'post',
-                url: '/v1/variables',
-                data: {
-                    key: envVariable.key,
-                    value: envVariable.value,
-                    locked: false,
-                },
-            });
-        }
-    }
+	// NOTE: skips variables with empty value
+	for (let envVariable of envVariables) {
+		if (envVariable.value) {
+			await instance({
+				method: 'post',
+				url: '/v1/variables',
+				data: {
+					key: envVariable.key,
+					value: envVariable.value,
+					locked: false,
+				},
+			});
+		}
+	}
 }
 
 module.exports = {
