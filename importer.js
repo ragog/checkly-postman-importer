@@ -3,10 +3,11 @@ const converter = require('./converter');
 
 const checklyApiKey = process.env.CHECKLY_API_KEY;
 const checklyAccountId = process.env.CHECKLY_ACCOUNT_ID;
+const checklyBaseUrl = process.env.CHECKLY_BASE_URL;
 
 // Axios base config
 const instance = axios.create({
-    baseURL: 'https://api.checklyhq.com',
+    baseURL: checklyBaseUrl ? checklyBaseUrl : 'https://api.checklyhq.com',
     headers: {
         Authorization: `Bearer ${checklyApiKey}`,
         'X-Checkly-Account': checklyAccountId,
