@@ -21,10 +21,11 @@ const importer = require('./importer');
 		}).argv;
 
 	const collectionPath = options.p;
+	const environmentPath = options.e;
 
 	// Environment variable file import (Optional)
-	if (options.e) {
-		let environmentJson = fs.readFileSync(options.e);
+	if (environmentPath) {
+		let environmentJson = fs.readFileSync(environmentPath);
 		await importer.consumeEnvironment(environmentJson)
 	}
 

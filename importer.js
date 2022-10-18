@@ -23,21 +23,7 @@ async function consumeCollection(collectionJson) {
 
 	const variables = collectionJsonObj.variable;
 
-    if (variables?.length) {
-        for (let variable of variables) {
-            if (variable.value) {
-                console.log(`Adding variable '${variable.key}'.`)
-                await instance({
-                    method: 'post',
-                    url: '/v1/variables',
-                    data: { key: variable.key, value: variable.value },
-                });
-            } else {
-                console.log(`Variable '${variable.key}' has no value - skipping.`)
-            }
-            
-        }
-    }
+    await importVariables(variables)
 
 	// Postman Folders -> Checkly Groups
 	for (let postmanFolder of postmanFolders) {
@@ -76,20 +62,25 @@ async function consumeEnvironment(environmentJson) {
 
 	console.log('Importing environment ' + environmentVarsJsonObj.name);
 
-	// NOTE: skips variables with empty value
-	for (let envVariable of envVariables) {
-		if (envVariable.value) {
-			await instance({
-				method: 'post',
-				url: '/v1/variables',
-				data: {
-					key: envVariable.key,
-					value: envVariable.value,
-					locked: false,
-				},
-			});
-		}
-	}
+	await importVariables(envVariables)
+}
+
+async function importVariables(variables){
+    if (variables?.length) {
+        for (let variable of variables) {
+            if (variable.value) {
+                console.log(`Adding variable '${variable.key}'.`)
+                await instance({
+                    method: 'post',
+                    url: '/v1/variables',
+                    data: { key: variable.key, value: variable.value },
+                });
+            } else {
+                console.log(`Variable '${variable.key}' has no value - skipping.`)
+            }
+            
+        }
+    }
 }
 
 module.exports = {
