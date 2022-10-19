@@ -101,7 +101,7 @@ function transformTest(postmanTest, groupId) {
 			url: requestUrlRaw,
 			followRedirects: true,
 			body: requestBody,
-			bodyType: 'RAW',
+			bodyType: requestBodyMode,
 			headers: newRequestHeaders,
 			queryParameters: newQueryParams,
 			assertions: [],
